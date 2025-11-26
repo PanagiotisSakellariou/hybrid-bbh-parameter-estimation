@@ -116,5 +116,46 @@ Upon completion, a results directory is generated containing:
 * `loss.png`: A figure visualizing the Training vs. Validation loss over epochs.
 * `metrics.json`: A generic file containing Mean Absolute Error (MAE) and other evaluation metrics.
 
+## 4. Comparative Analysis and Visualization
+
+To assess the performance improvements offered by the hybrid architecture, the `parameter_analysis.ipynb` Jupyter Notebook is provided. This tool facilitates a direct comparison between the baseline CNN model and the Hybrid CNN-Transformer.
+
+### Functionality
+The notebook performs an evaluation of both the standard CNN and the Hybrid models. The primary output consists of **scatter plots** illustrating the correlation between true injected parameters and the model-predicted values across the testing set.
+
+### Configuration
+Prior to execution, the following parameters must be defined within the notebook:
+1.  **Dataset Path:** The location of the pre-processed TensorFlow Test Dataset.
+2.  **Model Selection:** The specific architecture to be evaluated (Standard CNN or Hybrid).
+3.  **Weights Path:** The directory containing the `best_model.pth` file generated during the training phase.
+4.  **Output Directory:** The destination folder where the generated figures will be saved.
+
+### Execution
+```bash
+jupyter notebook parameter_analysis.ipynb
+```
+
+## 5. Latent Space Analysis (t-SNE)
+
+To investigate the internal representations learned by the model, the `plot_features.ipynb` notebook is utilized. This tool employs **t-Distributed Stochastic Neighbor Embedding (t-SNE)** to project the high-dimensional latent space into 2D visualizations.
+
+### Functionality
+The notebook extracts feature maps from a specified layer of the neural network and generates:
+* **Individual Parameter Plots:** t-SNE projections colored by the value of each physical parameter.
+* **Composite Mass Plot:** A combined visualization specifically analyzing the structuring of the mass parameters ($m_1$ and $m_2$) within the latent space.
+
+### Configuration
+The following parameters must be configured within the notebook:
+1.  **Dataset Path:** The directory containing the pre-processed TensorFlow Datasets.
+2.  **Model Selection:** The specific architecture to be analyzed (e.g., Standard CNN or Hybrid).
+3.  **Weights Path:** The location of the best-performing model weights (`.pth` file).
+4.  **Target Layer:** The index of the specific neural network layer from which the latent space representations are to be extracted.
+5.  **Output Destination:** The directory where the resulting t-SNE plots will be stored.
+   
+### Execution
+```bash
+jupyter notebook plot_features.ipynb
+```
+
 
 
