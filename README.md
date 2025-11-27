@@ -157,5 +157,169 @@ The following parameters must be configured within the notebook:
 jupyter notebook plot_features.ipynb
 ```
 
+## 6. Real Gravitational-Wave Data Acquisition
 
+To evaluate the model on empirical observational data, the `real_gw_to_lmdb.py` script is employed. This tool interfaces with the **Gravitational Wave Open Science Center (GWOSC)** to automatically retrieve and format events from the H1 detector.
 
+### Processing Pipeline
+The script iterates through all available observing runs and performs the following operations:
+
+1.  **Data Retrieval:** Queries GWOSC for 32-second strain segments at a native sampling rate of 16384 Hz.
+2.  **Integrity Check:** Scans for missing data (`NaN` values); corrupted segments are automatically excluded.
+3.  **Resampling:** Downsamples the strain to **8192 Hz** to match the input specifications of the trained neural networks.
+4.  **Cropping:** Extracts a precise **1-second window** centered around the event time.
+5.  **Serialization:** The processed waveforms are stored in an **LMDB database**. This format is selected to maintain compatibility with the existing data ingestion pipelines used during the training phase.
+
+### Configuration
+Before running the script, open `real_gw_to_lmdb.py` and modify the following:
+
+* **Output Paths:** Set the directory paths where you want the LMDB database, and the CSV file to be stored.
+
+### Outputs
+The execution results in two primary files:
+* **LMDB Database:** Contains the processed real waveforms. The retrieval keys are constructed based on the event's source parameters (masses and distance).
+* **CSV Index:** A metadata file containing the lookup keys, official **Event Names**, and the reference parameter values (Masses, Distance) along with their **Upper and Lower Bounds**.
+
+### Execution
+```bash
+python real_gw_to_lmdb.py
+```
+
+## 7. Real Data Filtering and Fine-Tuning Preparation
+
+To prepare the observational data for domain adaptation (fine-tuning), the `real_gw_tf_datasets.py` script is employed. This tool filters the real event database and constructs TensorFlow Datasets specifically designed for cross-validation experiments.
+
+Note: This script requires lmdb_dataset_handler.py to be present in the same directory, as it depends on helper classes defined therein.
+
+### Filtering Logic
+The script scans the LMDB of real events and retains only those whose estimated parameters (masses and distance) fall within the specific training range of the pre-trained Neural Networks.
+* **Result:** Under the default configuration, **5 confirmed events** match these criteria and are selected for analysis.
+
+### Dataset Construction (Cross-Validation Slices)
+The script generates specific TensorFlow Datasets to support two distinct fine-tuning strategies. For every dataset slice, **Min-Max normalization** is applied using statistics derived strictly from the *training* portion of that specific fold to prevent data leakage.
+
+#### Strategy A: Single-Event Training (1-vs-4)
+* **Objective:** To test the model's ability to learn from a single real-world example.
+* **Protocol:** The model is fine-tuned on **1 event** and evaluated on the remaining **4 events**.
+* **Output:** 5 distinct dataset splits.
+* **Naming Convention:** Datasets are identified by the pattern `slice[N]` (e.g., `slice1_train_dataset`).
+
+#### Strategy B: Leave-One-Out Training (4-vs-1)
+* **Objective:** To test the model's generalization by maximizing the real-world training data.
+* **Protocol:** The model is fine-tuned on **4 events** and evaluated on the remaining **1 event**.
+* **Output:** 5 distinct dataset splits.
+* **Naming Convention:** Datasets are identified by the pattern `slice[N]_reverse` (e.g., `slice1_reverse_train_dataset`).
+
+### Configuration
+Before executing the script, the following paths must be defined within `real_gw_tf_datasets.py`:
+1.  **Source LMDB:** Path to the database containing the processed real gravitational waves.
+2.  **Source CSV:** Path to the metadata file generated in the previous step.
+3.  **Destination Directory:** The folder where the resulting TensorFlow Datasets will be saved.
+
+### Execution
+```bash
+python real_gw_tf_datasets.py
+```
+
+## 8. Fine-Tuning and Statistical Evaluation
+
+Following the dataset preparation, the model undergoes domain adaptation (fine-tuning) using the `real_gw_slice_policy.py` script, followed by statistical aggregation using `real_gw_slice_policy.ipynb`.
+
+### Phase A: Fine-Tuning Execution
+The `real_gw_slice_policy.py` script performs training and evaluation for both the **DeepModel** (Standard CNN) and its **Hybrid** variant. The process iterates through every dataset slice (both Strategy A and Strategy B).
+
+#### Methodology
+1.  **Weight Initialization:** For each slice, the model is initialized with the best weights obtained from the training on artificial strains (Step 3).
+2.  **Training:** The model is fine-tuned on the specific training slice.
+3.  **Boundary Evaluation:** A specialized evaluation metric is computed using the Upper and Lower bounds provided in the source CSV.
+    * If a prediction falls *within* the GWOSC confidence bounds: **MAE = 0**.
+    * Otherwise: Standard MAE is calculated.
+
+#### Configuration
+Before execution, update the following paths in `real_gw_slice_policy.py`:
+1.  **Datasets & CSV:** Paths to the "sliced" TensorFlow Datasets and the real event metadata CSV.
+2.  **Pre-trained Weights:** Path to the `best_model.pth` from the simulation training phase.
+3.  **Output Destination:** The root directory for results. The script automatically generates a hierarchical structure: `Main_Folder` -> `Model_Name_Slice_Name_Folder`.
+
+#### Outputs
+* **Results CSV:** A consolidated file containing metrics for all slices.
+* **Fine-Tuned Weights:** Saved specifically for each slice/model combination.
+* **Loss Figures:** Visualization of the fine-tuning convergence.
+
+```bash
+python real_gw_slice_policy.py
+```
+
+### Phase B: Statistical Analysis and Supplementary Data
+The `real_gw_slice_policy.ipynb` notebook is utilized to aggregate the results and generate the data presented in the paper's **Supplementary Table**.
+
+#### Functionality
+This notebook loads the results CSV and the fine-tuned weights to compute:
+* **Standard Metrics:** Mean MAE ($\pm$ Std) for standard slices and reverse slices.
+* **Boundary Metrics:** Mean Boundary MAE ($\pm$ Std) for standard and reverse slices.
+* **Verification:** Loads the fine-tuned weights to display a direct comparison of True vs. Predicted values for manual inspection.
+
+#### Configuration
+Required inputs for the notebook:
+1.  **Data Sources:** Paths to the Datasets and CSV.
+2.  **Model Weights:** Path to the directory containing the *fine-tuned* weights (generated in Phase A).
+3.  **Results File:** Path to the consolidated CSV generated in Phase A.
+
+```bash
+jupyter notebook real_gw_slice_policy.ipynb
+```
+
+## 9. Posterior Estimation with Normalizing Flows
+
+The final stage of the pipeline transitions from point-parameter estimation to full posterior density estimation. This is achieved using **Normalizing Flows** (via the `nflows` library) conditioned on the embeddings from the main neural network.
+
+### Phase A: Feature Normalization (Prerequisite)
+Before training the flow, the statistical properties (Mean and Standard Deviation) of the training dataset parameters must be extracted to normalize the target distribution.
+
+#### Execution
+Run the `mean_std_extractor.py` script.
+* **Input:** Path to the training dataset (artificial strains).
+* **Output:** Generates `parameters_mean.npy` and `parameters_std.npy` in the same directory.
+
+```bash
+python mean_std_extractor.py
+```
+
+### Phase B: Flow Training and Evaluation
+The `prob_training_evaluation.py` script integrates the Normalizing Flow (`nflows`) with the pre-trained CNN/Hybrid model to estimate full posterior distributions.
+
+#### Methodology
+* **Loss Function:** The model minimizes the **Negative Log-Likelihood (NLL)**.
+* **Freezing Policy:** By default, the main feature extractor (CNN/Transformer) is initialized with the best pre-trained weights and **frozen**. Only the Normalizing Flow layers are trained to learn the probability density.
+    * *Note:* This behavior is configurable; the backbone model can be unfrozen for end-to-end fine-tuning if desired.
+
+#### Advanced Metrics & Visualization
+In addition to standard error metrics, this stage computes probabilistic diagnostics:
+* **CRPS (Continuous Ranked Probability Score):** Measures the accuracy of the predicted cumulative distribution.
+* **Sharpness:** Quantifies the concentration (width) of the posterior distributions.
+* **Combined p-value:** A statistical test of consistency between the predicted and true distributions.
+* **P-P Plot:** A Probability-Probability plot is generated to visually assess calibration (should lie on the diagonal).
+
+#### Configuration
+Update the following paths in `prob_training_evaluation.py`:
+1.  **Statistics:** Paths to `parameters_mean.npy` and `parameters_std.npy`.
+2.  **Dataset Path:** The directory containing the TensorFlow Datasets (Training/Validation/Testing).
+3.  **Pre-trained Weights:** Path to the `best_model.pth` (from the initial simulation training) to initialize the frozen backbone.
+4.  **Destination Folder:** The directory where the resulting models, plots, and metrics will be saved.
+5.  **Hyperparameters:** Batch size, Learning Rate (LR), and Optimizer settings.
+
+#### Execution
+```bash
+python prob_training_evaluation.py
+```
+
+### Outputs
+Upon completion, a results directory is generated containing:
+* **`best_model.pth`**: The weights of the Normalizing Flow model yielding the lowest Negative Log-Likelihood (NLL).
+* **`checkpoint.pth`**: The final state of the model and optimizer (useful for resuming training).
+* **`loss.png`**: A figure visualizing the NLL loss convergence over epochs.
+* **`pp_plot.png`**: The Probability-Probability (P-P) plot, used to visually verify that the estimated posteriors are well-calibrated.
+* **`metrics.json`**: An enhanced metrics file containing standard errors plus probabilistic scores:
+    * **CRPS** (Continuous Ranked Probability Score)
+    * **Sharpness**
+    * **Combined p-value**
