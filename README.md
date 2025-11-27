@@ -290,7 +290,7 @@ The `prob_training_evaluation.py` script integrates the Normalizing Flow (`nflow
 
 #### Methodology
 * **Loss Function:** The model minimizes the **Negative Log-Likelihood (NLL)**.
-* **Freezing Policy:** By default, the main feature extractor (CNN/Transformer) is initialized with the best pre-trained weights and **frozen**. Only the Normalizing Flow layers are trained to learn the probability density.
+* **Freezing Policy:** By default, the main feature extractor (CNN/Transformer) is initialized with the best pre-trained weights (Step 3) and **frozen**. Only the Normalizing Flow layers are trained to learn the probability density.
     * *Note:* This behavior is configurable; the backbone model can be unfrozen for end-to-end fine-tuning if desired.
 
 #### Advanced Metrics & Visualization
@@ -323,3 +323,21 @@ Upon completion, a results directory is generated containing:
     * **CRPS** (Continuous Ranked Probability Score)
     * **Sharpness**
     * **Combined p-value**
+
+## Citation
+If you use this code or datasets in your research, please cite our paper:
+
+**BibTeX:**
+```bibtex
+@article{SAKELLARIOU2026101027,
+title = {Binary black hole parameter estimation with hybrid CNN-Transformer Neural Networks},
+journal = {Astronomy and Computing},
+volume = {54},
+pages = {101027},
+year = {2026},
+issn = {2213-1337},
+doi = {https://doi.org/10.1016/j.ascom.2025.101027},
+url = {https://www.sciencedirect.com/science/article/pii/S2213133725001003},
+author = {Panagiotis N. Sakellariou and Spiros V. Georgakopoulos and Sotiris Tasoulis and Vassilis P. Plagianakos},
+}
+```
