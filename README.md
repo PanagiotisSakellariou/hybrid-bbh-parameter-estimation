@@ -30,6 +30,8 @@ The script will produce three files:
 
 **⚠️ Storage Warning:** The default configuration generates a dataset of approximately **380 GB**. Ensure you have sufficient disk space before running this script.
 
+**⚠️ Runtime Warning:** The default configuration requires a significant amount of time to complete. Expect the process to take several days, potentially up to 2–3 weeks. Ensure your system can remain active and uninterrupted for this duration.
+
 ## 2. Data Preprocessing and Dataset Construction
 
 Following the generation of raw strains, the data undergoes preprocessing, noise injection, and normalization before being converted into optimized TensorFlow Datasets. This process is handled by the `final_datasets.py` script.
