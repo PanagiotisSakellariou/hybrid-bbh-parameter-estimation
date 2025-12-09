@@ -728,7 +728,7 @@ def train_model(model, train_loader, val_loader, epochs, resume_checkpoint=None)
     return train_losses, val_losses
 
 # Train the model
-epochs = 3  # <---- Change the number of Epochs here.
+epochs = 150  # <---- Change the number of Epochs here.
 checkpoint = None #f'{destination_folder}/{model.__class__.__name__}_checkpoint.pth' # uncomment this if you want to continue training from checkpoint.
 train_losses, val_losses = train_model(model, train_loader, val_loader, epochs, resume_checkpoint=checkpoint)
 
