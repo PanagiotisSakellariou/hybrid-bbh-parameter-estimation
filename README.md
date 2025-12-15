@@ -68,11 +68,22 @@ The execution results in the following files:
 * **Final Datasets:** Three TensorFlow Datasets (Training, Validation, Testing).
 * **Intermediate Artifacts:** A temporary LMDB database and log file (these may be deleted after successful execution).
 
-### Download Ready-to-Use Datasets
-If you wish to skip the generation and preprocessing steps, the final processed TensorFlow Datasets are available for download here:
-* [Training Dataset](LINK_HERE)
-* [Validation Dataset](LINK_HERE)
-* [Testing Dataset](LINK_HERE)
+### ⬇️ Download Ready-to-Use Datasets
+
+If you wish to skip the data generation and preprocessing steps, you can download the final processed TensorFlow Datasets directly.
+
+**File Size:** ~321 GB
+
+* **Direct Download:** [Download Datasets (.zip)](http://sgw.plagianakos.gr:8081/gw_datasets.zip)
+
+**Command Line (for remote servers / Colab):**
+```bash
+# Download the dataset
+wget [http://sgw.plagianakos.gr:8081/gw_datasets.zip](http://sgw.plagianakos.gr:8081/gw_datasets.zip)
+
+# Unzip the files
+unzip gw_datasets.zip
+```
 
 ## 3. Model Definition, Training and Evaluation
 
