@@ -74,7 +74,7 @@ If you wish to skip the data generation and preprocessing steps, you can downloa
 
 **File Size:** ~321 GB
 
-* **Direct Download:** [Download Datasets (.zip)](http://sgw.plagianakos.gr:8081/gw_datasets.zip)
+* **Direct Download:** <a href="http://sgw.plagianakos.gr:8081/gw_datasets.zip" target="_blank">Download Datasets (.zip)</a>
 
 **Command Line (for remote servers / Colab):**
 ```bash
