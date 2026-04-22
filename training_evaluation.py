@@ -344,8 +344,11 @@ class HybridShallowModel(nn.Module):
         
         self.conv3 = nn.Conv1d(32, 64, kernel_size=8, stride=1, dilation=4)
         self.pool3 = nn.MaxPool1d(kernel_size=4, stride=4)
-        
-        encoder_layer = nn.TransformerEncoderLayer(d_model=64, nhead=4) # embedding size = 64, 4 heads
+
+        # Normalization before Transformer
+        self.norm = nn.LayerNorm(64)
+      
+        encoder_layer = nn.TransformerEncoderLayer(d_model=64, nhead=4, batch_first=True) # embedding size = 64, 4 heads
         self.transformer  = nn.TransformerEncoder(encoder_layer, num_layers=2)
         
         self.fc1 = nn.Linear(64, 64)
@@ -365,11 +368,13 @@ class HybridShallowModel(nn.Module):
         x = self.pool3(x)
         
         # Prepare for Transformer
-        # Transpose to match Encoder input shape: (sequence_length, batch_size, embed_dim)
-        x = x.permute(2, 0, 1)
-        
+        # Transpose to match Encoder input shape: (batch_size, sequence_length, embed_dim)
+        x = x.permute(0, 2, 1)
+
+        x = self.norm(x)
+
         x = self.transformer(x)  # Output: (sequence_length, batch_size, embed_dim)
-        x = x[-1, :, :]  # Take the last sequence element (batch_size, embed_dim) 
+        x = x[:, -1, :]  # Take the last sequence element (batch_size, embed_dim) 
             
         x = self.fc1(x)
         x = torch.relu(x)
@@ -400,8 +405,11 @@ class HybridBNSModel(nn.Module):
         self.conv4 = nn.Conv1d(128, 256, kernel_size=8)
         # self.bn4 = nn.BatchNorm1d(256)
         self.pool4 = nn.MaxPool1d(kernel_size=4)
-        
-        encoder_layer = nn.TransformerEncoderLayer(d_model=256, nhead=4) # embedding size = 128, 4 heads
+
+        # Normalization before Transformer
+        self.norm = nn.LayerNorm(256)
+      
+        encoder_layer = nn.TransformerEncoderLayer(d_model=256, nhead=4, batch_first=True) # embedding size = 128, 4 heads
         self.transformer  = nn.TransformerEncoder(encoder_layer, num_layers=2)
         
         
@@ -433,11 +441,13 @@ class HybridBNSModel(nn.Module):
         x = self.pool4(x)
         
         # Prepare for Transformer
-        # Transpose to match Encoder input shape: (sequence_length, batch_size, embed_dim)
-        x = x.permute(2, 0, 1)
-        
+        # Transpose to match Encoder input shape: (batch_size, sequence_length, embed_dim)
+        x = x.permute(0, 2, 1)
+
+        x = self.norm(x)
+
         x = self.transformer(x)  # Output: (sequence_length, batch_size, embed_dim)
-        x = x[-1, :, :]  # Take the last sequence element (batch_size, embed_dim)
+        x = x[:, -1, :]  # Take the last sequence element (batch_size, embed_dim)
             
         x = self.fc1(x)
         x = torch.relu(x)
