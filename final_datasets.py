@@ -67,24 +67,32 @@ def yield_data(strains_env, keys, batch_size=1024):
 # ------------------------------
 def add_noise(strains_batch):
     noisy_batch = []
-
+    
+    length = 8192
     flow = 10.0
-    delta_f = 1.0 / 16
-    flen = int(8192 / delta_f) + 1
+    
+    # 1-second duration means 1.0 Hz frequency resolution
+    delta_f = 1.0 
+    
+    # Correct Nyquist bin calculation for Real FFT
+    flen = int(length / 2) + 1 
+    
     psd = pycbc.psd.aLIGOZeroDetHighPower(flen, delta_f, flow)
 
-    delta_t = 1.0 / 8192
-    tsamples = int(1 / delta_t)
+    # Time resolution (1 / sample_rate)
+    delta_t = 1.0 / length 
+    tsamples = length
     
     for strain in strains_batch:
+        # Generate the noise
         noise = pycbc.noise.noise_from_psd(tsamples, delta_t, psd)
         noise = noise.numpy().astype(np.float64)
         
         if np.isnan(noise).any():
             print("Warning: NaNs detected in noise!")
             
+        # Add the physical strain and the noise together
         noisy_strain = np.array(strain + noise, dtype=np.float64)
-
         noisy_batch.append(noisy_strain)
     
     return np.stack(noisy_batch)
